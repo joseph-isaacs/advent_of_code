@@ -1,0 +1,4 @@
+first: 24000
+second: 11000
+third: 6000
+sum: 41000

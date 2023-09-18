@@ -1,0 +1,4 @@
+first: 71023
+second: 68034
+third: 67232
+sum: 206289
