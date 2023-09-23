@@ -259,10 +259,25 @@ fn viewable_in_dir<'a, I>(path: I, height: u8) -> u64
     // let p = path.collect::<Vec<_>>();
     // let c = TakeUntil::new(p.iter().map(|c| *c), |p| *p >= height).collect::<Vec<_>>();
     // return c.len() as u64
-    return TakeUntil::new(path, |p| *p >= height).count() as u64;
+    return path.take_until(|p| *p >= height).count() as u64;
+    // return TakeUntil::new(path, |p| *p >= height).count() as u64;
 }
 
-struct TakeUntil<'a, I, P>
+pub trait TakeUntilIterator<'a, I, P>: Iterator<Item = &'a u8> + Sized
+    where I: Iterator<Item = &'a u8>,
+          P: Fn(&'a u8) -> bool,
+
+{
+    fn take_until(self, p: P) -> TakeUntil<'a, Self, P> {
+        TakeUntil::new(self, p)
+    }
+}
+
+impl<'a, I: Iterator<Item = &'a u8>, P: Fn(&'a u8) -> bool> TakeUntilIterator<'a, I, P> for I {}
+
+
+
+pub struct TakeUntil<'a, I, P>
     where I: Iterator<Item = &'a u8>,
           P: Fn(&'a u8) -> bool,
 
@@ -271,6 +286,7 @@ struct TakeUntil<'a, I, P>
     p: P,
     done: bool,
 }
+
 
 impl<'a, I, P> TakeUntil<'a, I, P>
     where I: Iterator<Item = &'a u8>,
