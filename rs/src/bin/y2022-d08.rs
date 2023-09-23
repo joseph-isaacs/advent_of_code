@@ -5,6 +5,7 @@ extern crate core;
 use std::cmp::max;
 use std::fs::File;
 use std::io::Read;
+use std::slice::Iter;
 
 #[derive(Debug,Clone)]
 struct ColumnIterator<'a, T> {
@@ -19,7 +20,7 @@ impl<'a, T> ColumnIterator<'a, T> {
         ColumnIterator {
             grid,
             pos: 0,
-            back_pos: grid[col].len(),
+            back_pos: if grid.len() == 0 { 0 } else { grid.len() },
             col,
         }
     }
@@ -29,7 +30,10 @@ impl <'a, T> Iterator for ColumnIterator<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let ll = self.grid[self.col].len();
+        if self.grid.len() == 0 {
+            return None;
+        }
+        let ll = self.grid.len();
         if self.pos >= ll {
             return None;
         }
@@ -187,18 +191,12 @@ fn visible_in_path<'a, I, I2>(iter: I, out_iter: I2)
         ret
     }).collect::<Box<_>>();
 
-    // out
-    println!("max_so_far {:?}", max_so_far);
-    println!("i1 {:?}", iter.clone().collect::<Vec<_>>());
-
     iter.zip(max_so_far.iter()).zip(out_iter).for_each(|((c, max), out)| {
         *out = *out || (*c as i64 > *max);
     });
-
-    // return out_iter;
 }
 
-fn max_height_until(trees: &mut Vec<Box<[u8]>>) {
+fn max_height_until(trees: &Vec<Box<[u8]>>) -> u64 {
     let len = trees[0].len();
     // let mut vis_tree = Vec::new();
     let mut out: Vec<Vec<bool>> = trees.iter().map(|tree| {
@@ -206,62 +204,17 @@ fn max_height_until(trees: &mut Vec<Box<[u8]>>) {
     }).collect::<Vec<_>>();
     trees.iter().enumerate().for_each(|(idx, tree)| {
         visible_in_path(tree.iter(), out[idx].iter_mut());
-    });
-
-    let s1: u64 = out.iter().map(|c| c.iter().map(|c| *c as u64).sum::<u64>()).sum();
-
-
-    trees.iter().enumerate().for_each(|(idx, tree)| {
         visible_in_path(tree.iter().rev(), out[idx].iter_mut().rev());
     });
 
-    let s2: u64 = out.iter().map(|c| c.iter().map(|c| *c as u64).sum::<u64>()).sum();
-
-
-
     for i in 0..len {
         visible_in_path(ColumnIterator::new(trees, i), out.iter_mut().as_mut_slice().iter_mut().map(|c| c.get_mut(i).unwrap()));
-    }
-
-    let s3: u64 = out.iter().map(|c| c.iter().map(|c| *c as u64).sum::<u64>()).sum();
-
-
-    for i in 0..len {
         visible_in_path(ColumnIterator::new(trees, i).rev(), out.iter_mut().as_mut_slice().iter_mut().map(|c| c.get_mut(i).unwrap()).rev());
     }
 
     let s4: u64 = out.iter().map(|c| c.iter().map(|c| *c as u64).sum::<u64>()).sum();
 
-    // visible_in_path(ColumnIterator::new(trees, 1).rev(), out.iter_mut().as_mut_slice().iter_mut().map(|c| c.get_mut(1).unwrap()).rev());
-
-
-
-
-    // let y= ;
-
-    // let y = out.iter_mut().map(|x| {
-    //    return &mut x[0]
-    // });
-    //
-    // // let mut xx: MutColumnIterator<bool> = MutColumnIterator::new(&mut out, 0);
-    // visible_in_path(ColumnIterator::new(trees, 0), y);
-
-    // let y2 = out.iter_mut().map(|x| {
-    //     return &mut x[0]
-    // });
-
-    // visible_in_path(ColumnIterator::new(trees, 0), y);
-    //
-    // visible_in_path(ColumnIterator::new(trees, 0).rev(), MutColumnIterator::new(&mut out, 0));
-    // println!("out {:?}", out);
-
-    println!("vis_tree {:?}", out);
-    println!("s1 {:?}", s1);
-    println!("s2 {:?}", s2);
-    println!("s3 {:?}", s3);
-    println!("s4 {:?}", s4);
-    println!("x {:?}", true as u64);
-    println!("x {:?}", false as u64);
+    return s4
 }
 
 fn main() {
@@ -278,8 +231,76 @@ fn main() {
         let tree_row = line.chars().map(|c| (c.to_string()).parse().unwrap()).collect::<Box<_>>();
         trees.push(tree_row);
     }
-    println!("trees {:?}", trees);
-    // println!("vis {:?}", visible_in_path(trees[1].iter()));
-    println!("vis {:?}", max_height_until(&mut trees));
-    // println!("here {:?}", trees.as_slice())
+    println!("trees: {:?}", trees);
+    println!("sum vis {:?}", max_height_until(& trees));
+    println!("best view score {:?}", best_view_score(&mut trees));
+}
+
+fn best_view_score(trees: &mut Vec<Box<[u8]>>) -> u64 {
+    let mut best_score = 0;
+    for i in 1..(trees.len()-1) {
+        for j in 1..(trees[i].len()-1) {
+            let height = trees[i][j];
+            let right_score = viewable_in_dir(trees[i][(j+1)..].iter(), height);
+            let left_score = viewable_in_dir(trees[i][..j].iter().rev(), height);
+            let up_score = viewable_in_dir(ColumnIterator::new(&trees[..i], j).rev(), height);
+            let down_score = viewable_in_dir(ColumnIterator::new(&trees[(i+1)..], j), height);
+            let score = left_score * right_score * up_score * down_score;
+            best_score = max(best_score, score);
+        }
+    }
+
+    return best_score;
+}
+
+fn viewable_in_dir<'a, I>(path: I, height: u8) -> u64
+    where I: Iterator<Item = &'a u8>
+{
+    // let p = path.collect::<Vec<_>>();
+    // let c = TakeUntil::new(p.iter().map(|c| *c), |p| *p >= height).collect::<Vec<_>>();
+    // return c.len() as u64
+    return TakeUntil::new(path, |p| *p >= height).count() as u64;
+}
+
+struct TakeUntil<'a, I, P>
+    where I: Iterator<Item = &'a u8>,
+          P: Fn(&'a u8) -> bool,
+
+{
+    iter: I,
+    p: P,
+    done: bool,
+}
+
+impl<'a, I, P> TakeUntil<'a, I, P>
+    where I: Iterator<Item = &'a u8>,
+        P: Fn(&'a u8) -> bool,
+{
+    fn new(iter: I, p: P) -> Self {
+        TakeUntil {
+            iter,
+            p,
+            done: false
+        }
+    }
+}
+
+impl <'a, I, P> Iterator for TakeUntil<'a, I, P>
+    where I: Iterator<Item = &'a u8>,
+          P: Fn(&'a u8) -> bool,
+{
+    type Item = &'a u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        if let Some(next) = self.iter.next() {
+            if (self.p)(next) {
+                self.done = true
+            }
+            return Some(next);
+        }
+        return None;
+    }
 }
