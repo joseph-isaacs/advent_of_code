@@ -5,7 +5,6 @@ extern crate core;
 use std::cmp::max;
 use std::fs::File;
 use std::io::Read;
-use std::slice::Iter;
 
 #[derive(Debug,Clone)]
 struct ColumnIterator<'a, T> {
@@ -224,8 +223,6 @@ fn main() {
 
     let mut rows = string.lines().peekable();
 
-    let width = rows.peek().unwrap().len();
-
     let mut trees: Vec<Box<[u8]>> = Vec::new();
     for line in rows {
         let tree_row = line.chars().map(|c| (c.to_string()).parse().unwrap()).collect::<Box<_>>();
@@ -256,11 +253,7 @@ fn best_view_score(trees: &mut Vec<Box<[u8]>>) -> u64 {
 fn viewable_in_dir<'a, I>(path: I, height: u8) -> u64
     where I: Iterator<Item = &'a u8>
 {
-    // let p = path.collect::<Vec<_>>();
-    // let c = TakeUntil::new(p.iter().map(|c| *c), |p| *p >= height).collect::<Vec<_>>();
-    // return c.len() as u64
     return path.take_until(|p| *p >= height).count() as u64;
-    // return TakeUntil::new(path, |p| *p >= height).count() as u64;
 }
 
 pub trait TakeUntilIterator<'a, I, P>: Iterator<Item = &'a u8> + Sized
