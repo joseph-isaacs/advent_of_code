@@ -16,28 +16,10 @@ enum CommandDirection {
     Right,
 }
 
-#[derive(Debug, PartialEq, EnumString)]
-enum PositionMove {
-    Up,
-    UpLeft,
-    Left,
-    DownLeft,
-    Down,
-    DownRight,
-    Right,
-    UpRight,
-}
-
 #[derive(Debug, Hash, PartialOrd, PartialEq, Eq, Clone, Copy)]
 struct Position {
     x: i64,
     y: i64,
-}
-
-#[derive(Debug, Clone)]
-struct RopeJoinPosition {
-    head: Position,
-    tail: Position
 }
 
 type RopePosition<const N: usize> = [Position; N];
@@ -46,12 +28,6 @@ type RopePosition<const N: usize> = [Position; N];
 struct Command {
     command: CommandDirection,
     steps: u64,
-}
-
-fn head_is_touching_rope_tail(head: &Position, tail: &Position) -> bool {
-    let xs =  (head.x - tail.x).abs() <= 1;
-    let ys =  (head.y - tail.y).abs() <= 1;
-    return xs && ys;
 }
 
 fn next_constrained_step(head: Position, tail: Position) -> Position {
@@ -113,6 +89,18 @@ fn main() {
         .map(|line| { parse_command_lines(line).unwrap() })
         .collect::<Commands>();
 
+    let mut pos = [ Position { x: 0, y: 0 }; 2];
+
+    let mut prev_pos = HashSet::new();
+
+    for c in commands.as_slice() {
+        let (next_pos, interm) = c.next_steps(pos);
+        prev_pos.extend(interm.iter().map(|c| *c));
+        pos = next_pos;
+    }
+
+    println!("previous tail positions (2) {:?}", prev_pos.len());
+
     let mut pos = [ Position { x: 0, y: 0 }; 10];
 
     let mut prev_pos = HashSet::new();
@@ -120,13 +108,10 @@ fn main() {
     for c in commands.as_slice() {
         let (next_pos, interm) = c.next_steps(pos);
         prev_pos.extend(interm.iter().map(|c| *c));
-        println!("c {:?}", pos);
         pos = next_pos;
     }
 
-    // println!("commands {:?}", commands);
-    // println!("prev_pos {:?}", prev_pos);
-    println!("prev_pos {:?}", prev_pos.len());
+    println!("previous tail positions (10) {:?}", prev_pos.len());
 }
 
 fn parse_command_lines(command_str: &str) -> Option<Command> {
