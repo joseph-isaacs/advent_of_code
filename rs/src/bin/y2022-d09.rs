@@ -85,7 +85,7 @@ fn main() {
     std::io::BufReader::new(file).read_to_string(&mut string).unwrap();
 
     let commands = string
-       .lines()
+        .lines()
         .map(|line| { parse_command_lines(line).unwrap() })
         .collect::<Commands>();
 
