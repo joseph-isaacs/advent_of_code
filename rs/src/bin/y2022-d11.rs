@@ -107,7 +107,6 @@ enum Operand {
          }
      }
 
-     println!("item_time are {:?}", item_time);
      item_time.sort_by(|a, b| a.cmp(b).reverse());
      println!("item_time are {:?}", item_time);
      println!("item_time are {:?}", (item_time[0] as u128) * (item_time[1] as u128));
@@ -165,8 +164,6 @@ fn parse_monkey(s: &str) -> IResult<&str, Monkey> {
     let (out, (m_id, starting, statement, test)) = tuple((test_pred, p_starting_item, p_parse_operation, p_parse_m_test))(s)?;
 
     return Ok((out, Monkey { id: m_id.parse::<usize>().unwrap(), starting, code: MoneyCode{ statement, test }} ))
-
-
 }
 
 fn parse_monkeys(s: &str) -> IResult<&str, Vec<Monkey>> {
